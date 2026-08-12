@@ -1,4 +1,9 @@
-﻿using System;
+﻿// Modified by StaticBit: relay reconnection and subscription recovery fixes.
+// Upstream report: https://github.com/reown-com/reown-dotnet/issues/313
+// Fork: https://github.com/StaticBit-io/reown-dotnet
+// Portions (c) 2025 Reown, Inc. All Rights Reserved.
+
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
