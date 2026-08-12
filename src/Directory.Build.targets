@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+    <!--
+      Packaging overrides for the StaticBit build of this SDK.
+
+      Only active with -p:StaticBitPackaging=true, so an ordinary build stays byte-for-byte the
+      upstream one and this file is invisible to the pull request branch.
+
+      Applied in Directory.Build.targets rather than Directory.Build.props because every project
+      sets PackageId explicitly, and props are evaluated before the project body.
+
+      The package id is prefixed instead of reused: republishing under the upstream id would put a
+      package Reown did not build behind their name, which the WalletConnect Community License
+      §2(d) does not allow and which would be confusing to restore against nuget.org regardless.
+      Assembly names and namespaces are untouched, so consuming code needs no changes.
+    -->
+
+    <PropertyGroup Condition="'$(StaticBitPackaging)' == 'true' AND '$(PackageId)' != ''">
+        <PackageId>StaticBit.$(PackageId)</PackageId>
+
+        <!--
+          Prerelease suffix keeps the upstream version visible: this is 1.6.1 plus the relay
+          recovery fixes submitted upstream, not a version of our own invention.
+        -->
+        <PackageVersion>$(DefaultVersion)-sb.5</PackageVersion>
+        <Version>$(DefaultVersion)-sb.5</Version>
+
+        <Authors>StaticBit</Authors>
+        <Title>$(PackageId)</Title>
+        <Description>Unofficial build of $(Title.Replace('StaticBit.', '')) $(DefaultVersion) with relay reconnection fixes (reown-com/reown-dotnet#313). Not affiliated with or endorsed by Reown, Inc.</Description>
+
+        <!-- Required by the WalletConnect Community License §2(a). -->
+        <Copyright>Portions © 2025 Reown, Inc. All Rights Reserved</Copyright>
+
+        <PackageProjectUrl>https://github.com/StaticBit-io/reown-dotnet</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/StaticBit-io/reown-dotnet</RepositoryUrl>
+
+        <!-- Upstream icon and readme carry Reown branding; the fork ships neither. -->
+        <PackageIcon/>
+        <PackageReadmeFile/>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(StaticBitPackaging)' == 'true' AND '$(PackageId)' != ''">
+        <None Remove="..\..\media\reown-avatar-positive.png"/>
+        <None Remove="..\..\media\walletkit-icon.png"/>
+        <None Remove="README.md"/>
+    </ItemGroup>
+
+</Project>
