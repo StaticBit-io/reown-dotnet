@@ -16,6 +16,8 @@ namespace Reown.Core.Crypto
         private readonly string _storagePrefix = Constants.CORE_STORAGE_PREFIX;
 
         private bool _initialized;
+
+        private bool _disposed;
         private Dictionary<string, string> _keyChain = new();
 
         /// <summary>
@@ -75,10 +77,37 @@ namespace Reown.Core.Crypto
                 "reown.core.crypto.keychain";
         }
 
+        /// <remarks>
+        ///     Marked as disposed rather than left reusable. The instance is stored on
+        ///     <c>CoreOptions.KeyChain</c> by the client that built it, and those options routinely
+        ///     outlive the client — so the next one adopts this object unless its owner clears the
+        ///     field. Adopting it used to succeed and destroy the wallet: the keys are gone from
+        ///     memory but <see cref="_initialized" /> still stands, so Init skips loading, Crypto
+        ///     finds no client seed, generates a new one and writes the keychain back through the
+        ///     storage this dead instance still holds — replacing every session key on disk with
+        ///     that single seed.
+        ///     <para>
+        ///     Only <see cref="Init" /> refuses; the accessors carry on as before. Reuse is settled
+        ///     there, at a call site whose failures a client already handles, whereas the accessors
+        ///     are reached from message handling — parts of which are <c>async void</c>, where an
+        ///     exception ends the process. Trading a silent loss for a crash is no trade.
+        ///     </para>
+        /// </remarks>
         public void Dispose()
         {
+            _disposed = true;
             _keyChain?.Clear();
             Storage?.Dispose();
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(
+                    nameof(KeyChain),
+                    "This keychain was disposed. Clear CoreOptions.KeyChain before building another client.");
+            }
         }
 
         /// <summary>
@@ -86,6 +115,8 @@ namespace Reown.Core.Crypto
         /// </summary>
         public async Task Init()
         {
+            ThrowIfDisposed();
+
             if (!_initialized)
             {
                 var keyChain = await GetKeyChain();
@@ -182,7 +213,13 @@ namespace Reown.Core.Crypto
             var hasKey = await Storage.HasItem(StorageKey);
             if (!hasKey)
             {
-                await Storage.SetItem(StorageKey, new Dictionary<string, string>());
+                // Deliberately not written back. Storing an empty keychain here buys nothing — the
+                // first Set persists the whole thing anyway — while costing everything on the one
+                // occasion it matters: a storage that failed to load its state reports no keychain,
+                // and this call then replaces the keys on disk with nothing. Every session key is
+                // gone at that point, and the sessions themselves follow, since a session whose key
+                // cannot be found is indistinguishable from one that was never valid.
+                return new Dictionary<string, string>();
             }
 
             return await Storage.GetItem<Dictionary<string, string>>(StorageKey);

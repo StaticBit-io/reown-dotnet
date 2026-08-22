@@ -1,4 +1,5 @@
 ﻿using System;
+using Reown.Core.Common.Logging;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -660,6 +661,16 @@ namespace Reown.Core.Crypto
             }
             catch (InvalidOperationException)
             {
+                // Said out loud because of what it can mean. The client seed is this client's
+                // identity to the relay and is written once, on a first run — where this line is
+                // expected and harmless. At any later point it says the keychain came up without
+                // its seed, and a keychain missing its seed is missing the session keys beside it,
+                // so every existing session is already undecryptable. The two cannot be told apart
+                // from here, which is why this reports rather than decides.
+                ReownLogger.LogError(
+                    "Generating a new client seed. Expected on a first run; at any later point it "
+                    + "means the keychain came up empty and existing sessions are lost with it.");
+
                 var seedRaw = new byte[32];
                 RandomNumberGenerator.Fill(seedRaw);
                 seed = seedRaw.ToHex();
