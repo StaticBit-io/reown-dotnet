@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers;
 using System.IO;
 using System.Net.Sockets;
@@ -88,6 +88,15 @@ namespace Reown.Core.Network.Websocket.Internal
         {
             get
             {
+#if !NETSTANDARD2_1
+                // On browser-wasm the interval is never applied to the client, so the configured
+                // value is the only meaningful answer — and reading it back would touch the same
+                // Options object that platform rejects.
+                if (OperatingSystem.IsBrowser())
+                {
+                    return _keepAlive;
+                }
+#endif
                 var client = _client;
                 return client != null ? client.Options.KeepAliveInterval : _keepAlive;
             }
@@ -209,18 +218,34 @@ namespace Reown.Core.Network.Websocket.Internal
             ThrowIfDisposed();
 
             var client = new ClientWebSocket();
+
+// Both keep-alive options are skipped on browser-wasm: there the socket is the JavaScript
+// WebSocket and ClientWebSocketOptions is largely unsupported, so the setters throw
+// PlatformNotSupportedException rather than doing nothing, and a Blazor WebAssembly host cannot
+// open a connection at all. Nothing is lost — the browser runs its own keep-alive, and the silent
+// break described below is a mobile-radio problem that does not arise there. The check must be a
+// runtime one: net10.0 is the same target framework for a WebAssembly app as for a mobile one.
+// netstandard2.1 keeps the plain path, where OperatingSystem.IsBrowser does not exist and the
+// target is Unity, which uses its own transport for WebGL.
+#if NETSTANDARD2_1
             client.Options.KeepAliveInterval = _keepAlive;
+#else
+            if (!OperatingSystem.IsBrowser())
+            {
+                client.Options.KeepAliveInterval = _keepAlive;
 
 // ClientWebSocketOptions.KeepAliveTimeout exists from .NET 9 on; earlier targets have no way to
 // require a PONG and stay exposed to the silent break described below.
 #if NET9_0_OR_GREATER
-            // Without this the PING frames sent on KeepAliveInterval never require a PONG:
-            // ClientWebSocketOptions.KeepAliveTimeout defaults to Timeout.InfiniteTimeSpan. A link
-            // that dies silently — no FIN, no RST, as when a phone sleeps or a network vanishes —
-            // then stays WebSocketState.Open forever: ReceiveAsync keeps waiting, Closed never
-            // fires, and the reconnect path is never entered. The client believes it is connected
-            // while the relay stopped reaching it long ago.
-            client.Options.KeepAliveTimeout = _keepAliveTimeout;
+                // Without this the PING frames sent on KeepAliveInterval never require a PONG:
+                // ClientWebSocketOptions.KeepAliveTimeout defaults to Timeout.InfiniteTimeSpan. A
+                // link that dies silently — no FIN, no RST, as when a phone sleeps or a network
+                // vanishes — then stays WebSocketState.Open forever: ReceiveAsync keeps waiting,
+                // Closed never fires, and the reconnect path is never entered. The client believes
+                // it is connected while the relay stopped reaching it long ago.
+                client.Options.KeepAliveTimeout = _keepAliveTimeout;
+#endif
+            }
 #endif
 
             using (var connectCts = CancellationTokenSource.CreateLinkedTokenSource(externalToken, _cts.Token))
