@@ -1,3 +1,7 @@
+// Modified by StaticBit. The changes against upstream are listed in STATICBIT.md
+// at the repository root. Fork: https://github.com/StaticBit-io/reown-dotnet
+// Portions (c) 2025 Reown, Inc. All Rights Reserved.
+
 using System;
 using System.Collections.Generic;
 using System.Threading;
