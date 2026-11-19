@@ -21,7 +21,7 @@
           determines what a package is. Bump it in the same commit that is tagged sb/<version>.
           The prefix names the upstream release the fork was last based on.
         -->
-        <StaticBitVersion Condition="'$(StaticBitVersion)' == ''">1.6.1-sb.16</StaticBitVersion>
+        <StaticBitVersion Condition="'$(StaticBitVersion)' == ''">1.7.1-sb.17</StaticBitVersion>
         <StaticBitUpstreamId>$(PackageId)</StaticBitUpstreamId>
 
         <PackageId>StaticBit.$(PackageId)</PackageId>
