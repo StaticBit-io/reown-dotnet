@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+    <!--
+      Packaging overrides for the StaticBit build of this SDK. See STATICBIT.md at the repository
+      root for what this fork changes and how a release is made.
+
+      Only active with -p:StaticBitPackaging=true, so an ordinary build stays the upstream one.
+
+      Applied in Directory.Build.targets rather than Directory.Build.props because every project
+      sets PackageId and PackageVersion in its own body, which is evaluated after props.
+
+      The package id is prefixed instead of reused: republishing under the upstream id would put a
+      package Reown did not build behind their name (WalletConnect Community License §2(d)).
+      Assembly names and namespaces are untouched, so consuming code needs no changes.
+    -->
+
+    <PropertyGroup Condition="'$(StaticBitPackaging)' == 'true' AND '$(PackageId)' != ''">
+        <!--
+          The released version lives here, not on the command line, so the tagged commit alone
+          determines what a package is. Bump it in the same commit that is tagged sb/<version>.
+          The prefix names the upstream release the fork was last based on.
+        -->
+        <StaticBitVersion Condition="'$(StaticBitVersion)' == ''">1.6.1-sb.16</StaticBitVersion>
+        <StaticBitUpstreamId>$(PackageId)</StaticBitUpstreamId>
+
+        <PackageId>StaticBit.$(PackageId)</PackageId>
+        <PackageVersion>$(StaticBitVersion)</PackageVersion>
+        <Version>$(StaticBitVersion)</Version>
+
+        <Authors>StaticBit</Authors>
+        <Title>$(PackageId)</Title>
+        <Description>Unofficial build of $(StaticBitUpstreamId) from the StaticBit fork, with relay reconnection, browser-wasm and session-handling fixes. The changes against upstream are listed in STATICBIT.md at https://github.com/StaticBit-io/reown-dotnet. Not affiliated with or endorsed by Reown, Inc.</Description>
+
+        <!-- Required by the WalletConnect Community License §2(a). -->
+        <Copyright>Portions © 2025 Reown, Inc. All Rights Reserved</Copyright>
+
+        <PackageProjectUrl>https://github.com/StaticBit-io/reown-dotnet</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/StaticBit-io/reown-dotnet</RepositoryUrl>
+
+        <!-- Upstream icon and readme carry Reown branding; the fork ships neither. -->
+        <PackageIcon/>
+        <PackageReadmeFile/>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(StaticBitPackaging)' == 'true' AND '$(PackageId)' != ''">
+        <None Remove="..\..\media\reown-avatar-positive.png"/>
+        <None Remove="..\..\media\walletkit-icon.png"/>
+        <None Remove="README.md"/>
+    </ItemGroup>
+
+</Project>
